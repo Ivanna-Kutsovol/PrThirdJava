@@ -2,7 +2,8 @@ package com.prThird.prThird.controller;
 
 import com.prThird.prThird.dto.UserDTO;
 import com.prThird.prThird.model.User;
-import com.prThird.prThird.repository.UserRepository;
+import com.prThird.prThird.service.UserService;
+
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,20 +14,24 @@ import java.util.*;
 @RequestMapping("/users")
 public class UserController {
     
-    private final UserRepository userRepository;
+   private final UserService userService;
 
-     public UserController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+    public ResponseEntity<List<User>> getAllUsers(
+        @RequestParam(required = false) String name,
+        @RequestParam(required = false) String email
+    ) {
+        List<User> filteredUsers = userService.findUsers(name, email);
+        return ResponseEntity.ok(filteredUsers);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<User> getUser(@PathVariable String id) {
-        return userRepository.findById(id)
+        return userService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -35,40 +40,40 @@ public class UserController {
     public ResponseEntity<User> createUser(@RequestBody UserDTO userDTO) {
         String id = UUID.randomUUID().toString();
         User user = new User(id, userDTO.getName(), userDTO.getEmail());
-        userRepository.save(user);
+        userService.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable String id, @RequestBody UserDTO userDTO) {
-        Optional<User> existing = userRepository.findById(id);
+        Optional<User> existing = userService.findById(id);
         if (existing.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         User updated = new User(id, userDTO.getName(), userDTO.getEmail());
-        userRepository.save(updated);
+        userService.save(updated);
         return ResponseEntity.ok(updated);
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<User> partialUpdate(@PathVariable String id, @RequestBody UserDTO userDTO) {
-        Optional<User> existing = userRepository.findById(id);
+        Optional<User> existing = userService.findById(id);
         if (existing.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         User user = existing.get();
         if (userDTO.getName() != null) user.setName(userDTO.getName());
         if (userDTO.getEmail() != null) user.setEmail(userDTO.getEmail());
-        userRepository.save(user);
+        userService.save(user);
         return ResponseEntity.ok(user);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable String id) {
-        if (userRepository.findById(id).isEmpty()) {
+        if (userService.findById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        userRepository.delete(id);
+        userService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
